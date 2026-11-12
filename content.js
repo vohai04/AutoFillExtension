@@ -101,20 +101,40 @@
     return result;
   };
   const all = selector => roots().flatMap(root => Array.from(root.querySelectorAll(selector)));
+  function isQuestionHeading(node) {
+    if (!node || node.nodeType !== 1) return false;
+    if (node.matches('legend, h1, h2, h3, h4, h5, h6, [role="heading"], .question-title, .title, [class*="question-title"], [class*="questionText"], [class*="question-text"], [class*="questionLabel"]')) return true;
+    const text = (node.textContent || '').trim();
+    if (text.length >= 4 && text.length <= 400) {
+      if (/^\s*(?:\d+[\.\:\)\/]|câu\s*\d+|q\d+[\.\:\)])/i.test(text)) return true;
+      if (text.endsWith('*') && /\b(ban|anh|chi|ong|ba|nhu the nao|tai sao|o dau|khi nao|bao gio|la gi|the nao|bao nhieu|may|co khong|khong\?|\?)\b/i.test(normalize(text))) return true;
+    }
+    return false;
+  }
   function questionContainer(el) {
+    if (!el) return null;
     let cur = el.parentElement;
-    let best = null;
+    let candidate = null;
     while (cur && !cur.matches('body,main,form')) {
-      const hasHeading = cur.querySelector('legend,h1,h2,h3,h4,h5,h6,[role="heading"],.question-title,.title,[class*="question-title"],[class*="questionText"]');
-      if (cur.matches(BOUNDARY)) {
-        best ||= cur;
-        if (hasHeading) return cur;
-      } else if (hasHeading && (cur.matches('section,div,article') || cur.id || cur.className)) {
-        best ||= cur;
+      if (cur.matches(BOUNDARY)) return cur;
+
+      // Check for question headings inside cur
+      const headings = Array.from(cur.querySelectorAll(
+        'legend, h1, h2, h3, h4, h5, h6, [role="heading"], .question-title, .title, [class*="question-title"], [class*="questionText"], [class*="question-text"], p, div'
+      )).filter(h => isQuestionHeading(h) && visible(h));
+
+      if (headings.length === 1) {
+        return cur;
+      } else if (headings.length > 1) {
+        return candidate || cur.parentElement || el;
+      }
+
+      if (cur.matches('[class*="card"], [class*="rounded"], [class*="border"], [class*="item"], section, article') && cur.querySelector(CONTROL)) {
+        candidate = cur;
       }
       cur = cur.parentElement;
     }
-    return best || el.closest(BOUNDARY) || el.parentElement || el;
+    return candidate || el.closest(BOUNDARY) || el.parentElement || el;
   }
   function label(el) {
     const labelled = (el.getAttribute('aria-labelledby') || '').split(/\s+/)
@@ -154,8 +174,10 @@
       const name = el.getAttribute('name');
       let group = result.find(g => {
         if (g.type !== type || g.root !== el.getRootNode()) return false;
-        if (isRadio && name) return g.name === name && g.form === el.form;
-        return g.scope === scope;
+        if (g.scope !== scope) return false;
+        if (name && g.name && name !== g.name) return false;
+        if (isRadio && name && g.form !== el.form) return false;
+        return true;
       });
       if (!group) {
         group = {type, scope, name, form:el.form, root:el.getRootNode(), items:[]};
@@ -451,31 +473,31 @@
     }
 
     // 2. Visible error alerts/labels inside or near question containers
-    const errorAlerts = all('.error-message, .field-error, .invalid-feedback, [role="alert"], .text-danger, .has-error, .error, [class*="error"], [class*="invalid"]')
+    const errorAlerts = all('.error-message, .field-error, .invalid-feedback, [role="alert"], .text-danger, .has-error, .error, [class*="error"], [class*="invalid"], [class*="text-red-"], [class*="text-rose-"]')
       .filter(visible);
     for (const el of errorAlerts) {
       const text = el.textContent.trim();
       if (text && !timingNotice(text) &&
           /bat buoc|vui long|chua chon|chua tra loi|khong hop le|it nhat|toi da|can nhap|dien|tra loi|required|invalid|please|must|nhap mot so|enter a number|numeric/i.test(normalize(text))) {
-        const c = questionContainer(el);
+        const c = questionContainer(el) || el.closest('[class*="rounded"], [class*="card"], [class*="border"], section, fieldset') || el.parentElement;
         if (c && !seen.has(c)) { seen.add(c); list.push(c); }
       }
     }
 
-    // 3. Question containers with required empty controls or unselected groups
-    for (const el of controls()) {
-      if (el.matches(CHOICE)) {
-        const scope = el.closest('[role="radiogroup"],[role="row"],tr') || questionContainer(el);
-        if (scope && (scope.textContent.includes('*') || /bat buoc|required/i.test(normalize(scope.textContent)))) {
-          const grp = groups([el])[0];
-          if (grp && !grp.items.some(checked)) {
-            if (!seen.has(scope)) { seen.add(scope); list.push(scope); }
-          }
-        }
-      } else if (el.matches(TEXT) || el.matches('select')) {
-        if (el.required || el.hasAttribute('required') || questionContainer(el).textContent.includes('*')) {
-          if (!el.value.trim() && !seen.has(questionContainer(el))) {
-            const c = questionContainer(el);
+    // 3. Question containers with unselected choice groups (radio / checkbox)
+    for (const grp of groups(controls())) {
+      if (!grp.items.some(checked)) {
+        const c = grp.scope || questionContainer(grp.items[0]);
+        if (c && !seen.has(c)) { seen.add(c); list.push(c); }
+      }
+    }
+
+    // 4. Required empty text / select controls
+    for (const el of controls().filter(el => !el.matches(CHOICE))) {
+      if (el.matches(TEXT) || el.matches('select')) {
+        const c = questionContainer(el);
+        if (el.required || el.hasAttribute('required') || (c && (c.textContent.includes('*') || /bat buoc|required/i.test(normalize(c.textContent))))) {
+          if (!el.value.trim() && c && !seen.has(c)) {
             seen.add(c); list.push(c);
           }
         }
@@ -487,7 +509,13 @@
 
   async function repairQuestion(container, token) {
     if (!container || !alive(token)) return;
-    const items = Array.from(container.querySelectorAll(CONTROL)).filter(usable);
+    let items = Array.from(container.querySelectorAll(CONTROL)).filter(usable);
+    if (!items.length) {
+      const parentCard = container.closest('[class*="rounded"], [class*="card"], [class*="border"], section, fieldset, form') || container.parentElement;
+      if (parentCard && parentCard !== container) {
+        items = Array.from(parentCard.querySelectorAll(CONTROL)).filter(usable);
+      }
+    }
     if (!items.length) return;
 
     // Choice items (radio/checkbox)
@@ -1043,10 +1071,10 @@
       const ready = await waitForNavigation(token);
       if (!alive(token)) return;
       if (ready?.completed) continue;
-      if (!ready) { await stop('⚠️ Chưa thấy nút Tiếp tục/Gửi khả dụng. Hãy kiểm tra thông báo trên khảo sát.', token); return; }
-
-      const afterWaitError = validationError();
-      if (afterWaitError) { await stop(`⚠️ ${afterWaitError}`, token); return; }
+      if (!ready) {
+        await stop('⚠️ Chưa thấy nút Tiếp tục/Gửi khả dụng. Hãy kiểm tra thông báo trên khảo sát.', token);
+        return;
+      }
 
       let {button, next} = ready;
       const before = signature();
@@ -1099,14 +1127,13 @@
             await save({ botStatus: `🔧 Phát hiện câu hỏi báo lỗi, đang tự động sửa (${repairRetries}/3)...` });
             await autoRepairAllInvalid(token);
             await sleep(400);
-            if (!validationError()) {
-              const retryReady = await waitForNavigation(token);
-              if (retryReady?.button && usable(retryReady.button)) {
-                button = retryReady.button;
-                button.click();
-                deadline = Date.now() + 15000;
-                continue;
-              }
+            const retryReady = await waitForNavigation(token);
+            if (retryReady?.button && usable(retryReady.button)) {
+              button = retryReady.button;
+              button.scrollIntoView({block:'center'});
+              button.click();
+              deadline = Date.now() + 15000;
+              continue;
             }
           } else {
             await stop(`⚠️ ${errorAfter}`, token);
