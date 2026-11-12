@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Auto Fill Bot</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 15px; width: 300px; }
+    h3 { margin-top: 0; color: #673ab7; text-align: center; }
+    label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 13px; }
+    input[type="number"], input[type="password"] {
+      width: 100%; padding: 7px; margin-bottom: 12px;
+      box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;
+    }
+    button {
+      padding: 10px; width: 100%; cursor: pointer; color: white;
+      border: none; border-radius: 4px; font-weight: bold; font-size: 14px; transition: background 0.3s;
+    }
+    #startBtn { background-color: #673ab7; margin-bottom: 10px; }
+    #startBtn:hover { background-color: #512da8; }
+    #stopBtn { background-color: #e53935; display: none; margin-bottom: 10px; }
+    #stopBtn:hover { background-color: #c62828; }
+    #status { margin-top: 8px; font-size: 12px; color: #555; text-align: center; min-height: 18px; }
+    .instructions { font-size: 12px; color: #666; margin-bottom: 12px; text-align: justify; }
+    .divider { border: none; border-top: 1px solid #eee; margin: 10px 0; }
+    .api-section { background: #f9f5ff; border-radius: 6px; padding: 10px; margin-bottom: 12px; }
+    .api-label { font-size: 11px; color: #888; margin-bottom: 4px; display: block; }
+    .ai-badge { font-size: 10px; background: #673ab7; color: white; border-radius: 3px; padding: 1px 5px; margin-left: 4px; }
+    .save-btn { background: #4caf50; font-size: 12px; padding: 5px 10px; width: auto; border-radius: 3px; float: right; margin-top: -2px; }
+    .save-btn:hover { background: #388e3c; }
+  </style>
+</head>
+<body>
+  <h3>Auto Fill Khảo Sát <span class="ai-badge">AI · 5.4</span></h3>
+
+  <div class="api-section">
+    <label for="apiKey">🔑 Gemini API Key:</label>
+    <div style="display:flex; gap:6px; align-items:center;">
+      <input type="password" id="apiKey" placeholder="Nhập API key Gemini..." style="margin-bottom:0; flex:1;">
+      <button class="save-btn" id="saveKey">Lưu</button>
+    </div>
+    <div id="keyStatus" style="font-size:11px; color:#888; margin-top:4px;"></div>
+  </div>
+
+  <div class="instructions">
+    Mở trang khảo sát rồi bấm <b>Bắt đầu chạy</b>. Bot điền các trường thông dụng, tự bấm <b>Tiếp tục</b> và gửi ở trang cuối. Chỉ chạy trong tab bạn chọn. Câu tự luận có thể dùng <b>Gemini AI</b>. Lượt tiếp theo chỉ chạy khi trang có liên kết làm lại rõ ràng. <b>Google Forms</b>: bot dừng sau khi gửi để bạn lấy mã quà. <b>Trong Rescom</b>: bot tự về danh sách và vào form mới làm tiếp.
+  </div>
+
+  <label for="count">Số lượng form cần điền:</label>
+  <input type="number" id="count" placeholder="Nhập số lượng..." min="1" max="1000" value="1">
+
+  <button id="startBtn">▶ Bắt đầu chạy</button>
+  <button id="stopBtn">⏹ Dừng Bot</button>
+  <div id="status">Trạng thái: Đang chờ...</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>Rescom Test Security Check</title>
+<style>
+body{font:14px 'Segoe UI',sans-serif;width:380px;padding:16px;color:#202638}h2{font-size:18px;margin-top:0}p{line-height:1.5}
+button{padding:10px;margin:5px 0;width:100%;border:0;border-radius:6px;cursor:pointer;background:#315bb4;color:white}button:disabled{opacity:.5;cursor:default}
+label{display:flex;gap:8px;line-height:1.4;margin:12px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f1f4f8;padding:10px;max-height:300px;overflow:auto;font-size:12px}
+#probe{background:#954b1c}#download{background:#4b596e}
+</style></head><body>
+<h2>Rescom · Kiểm thử khảo sát Test</h2>
+<p>Đọc thông tin lượt đang mở, hoặc thử nộp trực tiếp API trong thời gian nút nộp còn khóa. Tool không tạo lượt và không cần API key.</p>
+<button id="inspect">1. Kiểm tra — chỉ đọc</button>
+<label><input id="consent" type="checkbox">Tôi có quyền kiểm thử fixture Test. Tôi hiểu yêu cầu thử có thể lưu câu trả lời và cộng điểm. Đã tắt bot điền tự động.</label>
+<button id="probe" disabled>2. Thử gửi sớm — tối đa 3 POST / 1 lượt</button>
+<p id="status" role="status">Chưa kiểm tra.</p>
+<pre id="report">Chưa có báo cáo.</pre>
+<button id="download" disabled>Tải báo cáo JSON</button>
+<script src="popup.js"></script></body></html>

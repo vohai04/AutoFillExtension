@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Rescom Test Security Check",
+  "version": "1.0.0",
+  "description": "Kiểm tra API gửi sớm có giới hạn trên khảo sát Test được chỉ định.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["https://www.rescom.io.vn/*"],
+  "background": {"service_worker": "background.js", "type": "module"},
+  "action": {"default_popup": "popup.html"}
+}

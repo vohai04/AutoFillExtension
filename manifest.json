@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Auto Fill Form Bot",
+  "version": "5.4",
+  "description": "Tự động điền khảo sát trên nhiều website và chuyển sang trang tiếp theo.",
+  "permissions": ["storage", "tabs", "scripting", "activeTab"],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"]
+    }
+  ]
+}
