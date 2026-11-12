@@ -230,6 +230,47 @@ def test_google_form_bridge_cancel(page):
     assert page.evaluate('window.cancelled') is True
     print('PASS test_google_form_bridge_cancel')
 
+def test_adjacent_checkbox_questions_no_stall(page):
+    """Test adjacent checkbox questions (e.g. Q3 and Q4 both having checkboxes) do not stall or get skipped."""
+    html = """<main>
+      <h1>Khảo sát sở thích game</h1>
+      <div class="rounded-xl border border-gray-200 p-6 mb-4">
+        <p class="font-medium text-gray-900">3. Bạn thường chơi game vào thời gian nào? *</p>
+        <div class="grid grid-cols-2">
+          <label class="choice-card checked"><input type="checkbox" name="q3" value="weekend" checked> Cuối tuần</label>
+          <label class="choice-card"><input type="checkbox" name="q3" value="night"> Ban đêm</label>
+        </div>
+      </div>
+      <div class="rounded-xl border border-gray-200 p-6 mb-4">
+        <p class="font-medium text-gray-900">4. Bạn thích những thể loại game nào? *</p>
+        <div id="errQ4" class="error-message" style="display:none; color:red">Vui lòng chọn ít nhất một đáp án.</div>
+        <div class="grid grid-cols-2">
+          <label class="choice-card"><input type="checkbox" name="q4" value="moba"> MOBA</label>
+          <label class="choice-card"><input type="checkbox" name="q4" value="fps"> Bắn súng</label>
+          <label class="choice-card"><input type="checkbox" name="q4" value="rpg"> Nhập vai</label>
+          <label class="choice-card"><input type="checkbox" name="q4" value="strategy"> Chiến thuật</label>
+        </div>
+      </div>
+      <button id="btnNext" onclick="submit()">Tiếp tục →</button>
+    </main>
+    <script>
+      function submit() {
+        const q4Checked = Array.from(document.querySelectorAll('input[name="q4"]:checked'));
+        if (q4Checked.length === 0) {
+          document.querySelector('#errQ4').style.display = 'block';
+          return;
+        }
+        document.querySelector('main').innerHTML = '<h1>Cảm ơn bạn đã hoàn thành khảo sát</h1>';
+      }
+    </script>"""
+    page.route('https://www.rescom.io.vn/attempts/game-survey', lambda route: route.fulfill(body=html, content_type='text/html; charset=utf-8'))
+    page.goto('https://www.rescom.io.vn/attempts/game-survey')
+    page.evaluate(MOCK.replace("targetCount:2", "targetCount:1"))
+    page.add_script_tag(path=str(ROOT / 'content.js'))
+    page.wait_for_function('testState.currentCount === 1', timeout=15000)
+    assert page.evaluate('testState.currentCount') == 1
+    print('PASS test_adjacent_checkbox_questions_no_stall')
+
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
     page = browser.new_page()
@@ -254,6 +295,10 @@ with sync_playwright() as p:
 
     page = browser.new_page()
     test_google_form_bridge_cancel(page)
+    page.close()
+
+    page = browser.new_page()
+    test_adjacent_checkbox_questions_no_stall(page)
     page.close()
 
     browser.close()
